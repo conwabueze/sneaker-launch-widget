@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adidas Retail Launch Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Oswald for headers, Inter for UI, Roboto Mono for SKUs -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa; /* Slightly off-white for internal tool feel */
+            color: #000000;
+        }
+        
+        h1, h2, h3, .brand-font {
+            font-family: 'Oswald', sans-serif;
+            text-transform: uppercase;
+        }
+
+        .sku-font {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px; 
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e5e7eb; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #9ca3af; 
+            border-radius: 2px;
+        }
+
+        /* Image hover effect */
+        .card-image-container img {
+            transition: transform 0.3s ease;
+        }
+        .card-image-container:hover img {
+            transform: scale(1.05);
+        }
+
+        /* Bell animation */
+        .bell-icon {
+            transition: all 0.2s ease;
+        }
+        .bell-icon:active {
+            transform: scale(0.9);
+        }
+
+        /* RESPONSIVE FLYOUT ANIMATION */
+        /* Default (Mobile): Hides by moving down (Translate Y) */
+        .flyout-hidden {
+            transform: translateY(100%);
+        }
+
+        /* Desktop (md and up): Hides by moving right (Translate X) */
+        @media (min-width: 768px) {
+            .flyout-hidden {
+                transform: translateX(100%) !important;
+            }
+        }
+    </style>
+</head>
+<body class="p-0 md:p-8 flex justify-center min-h-screen bg-gray-50">
+
+    <!-- Widget Container -->
+    <div class="w-full max-w-xl md:max-w-6xl bg-white md:shadow-sm md:border border-gray-200 min-h-screen md:min-h-0 md:rounded-lg overflow-hidden flex flex-col relative">
+        
+        <!-- Internal Header Section -->
+        <div class="bg-black text-white p-4 md:p-6 flex justify-between items-center sticky top-0 z-20">
+            <div>
+                <h1 class="text-xl md:text-3xl font-bold tracking-tight">Launch Dashboard</h1>
+            </div>
+            <div class="text-right">
+                <div class="text-xs text-gray-400 font-mono" id="current-date"></div>
+                <div class="text-[10px] font-bold bg-gray-800 px-2 py-1 rounded inline-block mt-1 text-green-400">STORE: #4402 NYC</div>
+            </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="flex space-x-2 p-3 border-b border-gray-200 overflow-x-auto bg-white sticky top-[76px] md:static z-10 shadow-sm md:shadow-none">
+            <button class="px-3 py-1.5 text-xs font-bold bg-black text-white rounded-full whitespace-nowrap">THIS WEEK</button>
+            <button class="px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-full whitespace-nowrap">HIGH HEAT</button>
+            <button class="px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-full whitespace-nowrap">PERFORMANCE</button>
+            <button class="px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-full whitespace-nowrap">HYPE DROP</button>
+        </div>
+
+        <!-- Content Area -->
+        <div class="p-0 md:p-6 bg-gray-50 flex-grow">
+            <!-- Grid Container -->
+            <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 md:gap-4 lg:gap-6 pb-24 md:pb-0">
+                <!-- Cards will be injected here by JS -->
+            </div>
+        </div>
+
+        <!-- Flyout Overlay (Backdrop) -->
+        <div id="flyout-overlay" onclick="closeFlyout()" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity duration-300 opacity-0"></div>
+
+        <!-- Flyout Panel (Responsive: Bottom Sheet on Mobile, Side Panel on Desktop) -->
+        <div id="product-flyout" class="fixed bottom-0 left-0 right-0 z-50 transform transition-transform duration-300 ease-out md:fixed md:top-0 md:h-screen md:w-[450px] md:right-0 md:left-auto md:border-l md:border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.15)] md:shadow-[-4px_0_20px_rgba(0,0,0,0.1)] bg-white rounded-t-2xl md:rounded-none flex flex-col max-h-[85vh] md:max-h-full flyout-hidden">
+            
+            <!-- Drag Handle (Mobile Visual Only) -->
+            <div class="w-full flex justify-center pt-3 pb-1 md:hidden" onclick="closeFlyout()">
+                <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            </div>
+
+            <!-- Flyout Header -->
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-start bg-white rounded-t-2xl md:rounded-none">
+                <div>
+                    <span id="flyout-category" class="text-xs font-bold text-gray-400 tracking-wider">CATEGORY</span>
+                    <h2 id="flyout-title" class="text-2xl font-bold uppercase leading-none mt-1">PRODUCT NAME</h2>
+                    <div class="flex items-center gap-2 mt-2">
+                         <span id="flyout-price" class="text-sm font-semibold text-black">$000</span>
+                         <span class="text-gray-300">|</span>
+                         <span id="flyout-sku" class="sku-font text-xs text-gray-500 bg-gray-100 px-1 rounded">SKU: 00000</span>
+                    </div>
+                </div>
+                <button onclick="closeFlyout()" class="text-gray-400 hover:text-black p-2">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Flyout Scrollable Content -->
+            <div class="overflow-y-auto p-6 space-y-6 flex-grow">
+                <!-- Main Image -->
+                <div class="w-full aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
+                     <img id="flyout-image" src="" class="w-full h-full object-cover mix-blend-multiply" alt="Product Detail">
+                     <div id="flyout-tier" class="absolute top-2 left-2 bg-black text-white text-[10px] font-bold px-2 py-1 uppercase">TIER</div>
+                </div>
+
+                <!-- Section: Launch Details -->
+                <div class="bg-gray-50 p-4 rounded border border-gray-100">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">
+                        <i class="fa-regular fa-calendar"></i> Launch Protocol
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-[10px] text-gray-500 block">RELEASE DATE</span>
+                            <span id="flyout-date" class="text-sm font-bold text-gray-900">DATE</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-gray-500 block">ALLOCATION</span>
+                            <span class="text-sm font-bold text-gray-900">Strict / High</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Staff Guidance -->
+                <div>
+                    <h3 class="text-sm font-bold uppercase mb-2 border-l-4 border-yellow-400 pl-2">Staff Briefing</h3>
+                    <p id="flyout-note" class="text-sm text-gray-700 leading-relaxed bg-yellow-50 p-3 rounded">
+                        Note goes here...
+                    </p>
+                </div>
+
+                <!-- Section: Tech Specs -->
+                <div>
+                    <h3 class="text-sm font-bold uppercase mb-2">Key Selling Points</h3>
+                    <ul class="space-y-2">
+                        <li class="flex items-start gap-3 text-sm text-gray-600">
+                            <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                            <span id="flyout-tech">Tech feature here</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-gray-600">
+                            <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                            <span>Premium materials construction</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-gray-600">
+                            <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                            <span>Archive-inspired silhouette</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Sticky Bottom Action -->
+            <div class="p-4 border-t border-gray-100 bg-white">
+                <button class="w-full bg-black text-white font-bold uppercase py-3 rounded text-sm hover:bg-gray-800 transition-colors flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-clipboard-check"></i> Mark as Read
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Set current date
+        const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', dateOptions).toUpperCase();
+
+        // Mock Data: Internal Retail Data
+        const releases = [
+            {
+                id: 1,
+                sku: "BB1840",
+                name: "Yeezy Boost 750",
+                category: "YEEZY",
+                price: "$350",
+                date: "FEB 14",
+                tier: "HIGH HEAT",
+                image: "https://image-cdn.hypb.st/https%3A%2F%2Fhypebeast.com%2Fimage%2F2016%2F06%2Fadidas-yeezy-boost-750-grey-gum-101.jpg?q=75&w=800&cbr=1&fit=max", // Generic suede high-top placeholder
+                colorway: "Grey / Gum",
+                staffNote: "Strict launch protocol. 1 pair per customer. Check ID. Do not display on floor until launch morning.",
+                techFeature: "Full-length Boost Midsole"
+            },
+            {
+                id: 2,
+                sku: "IH3261",
+                name: "Wales Bonner Samba",
+                category: "ORIGINALS",
+                price: "$180",
+                date: "FEB 16",
+                tier: "COLLAB",
+                image: "https://ekicks.eu/cdn/shop/files/Adidas_Samba_Wales_Bonner_Navy_Croc_1_2048x.jpg?v=1730211426",
+                colorway: "Croc - Collegiate Navy",
+                staffNote: "Merch with WB apparel capsule. Limited allocation. Focus on the unique tongue detail and stitching.",
+                techFeature: "Croc-Embossed Leather Upper"
+            },
+            {
+                id: 3,
+                sku: "HQ4499",
+                name: "JS Wings 2.0",
+                category: "ORIGINALS",
+                price: "$220",
+                date: "FEB 20",
+                tier: "TIER 0",
+                image: "https://images.stockx.com/images/adidas-JS-Wings-2-Black-Patent.png?fit=fill&bg=FFFFFF&w=700&h=500&fm=webp&auto=compress&q=90&dpr=2&trim=color&updated_at=1627415492", // Placeholder
+                colorway: "Cloud White / Core Black",
+                staffNote: "Niche appeal. Highlight the archive design legacy. Display on top shelf for visibility.",
+                techFeature: "Iconic Wing Detail"
+            },
+            {
+                id: 4,
+                sku: "EG4958",
+                name: "Superstar",
+                category: "ORIGINALS",
+                price: "$100",
+                date: "FEB 22",
+                tier: "FRANCHISE",
+                image: "https://assets.adidas.com/images/w_600,f_auto,q_auto/8eac8ff5c5d84a069d8eae02002e1a09_9366/Superstar_ADV_Shoes_Black_GW6931_01_00_standard.jpg", // Classic white shoe placeholder
+                colorway: "Core White / Core Black",
+                staffNote: "Evergreen staple. Ensure full size run on floor. Cross-merch with tracksuits.",
+                techFeature: "Rubber Shell Toe"
+            },
+            {
+                id: 5,
+                sku: "ID2295",
+                name: "Adidas Japan",
+                category: "ORIGINALS",
+                price: "$120",
+                date: "MAR 01",
+                tier: "CORE",
+                image: "https://assets.levelshoes.com/cdn-cgi/image/width=720,height=1008,quality=85,format=webp/media/catalog/product/j/s/js3774-cbcbsu_7.jpg?ts=20250725030653", // Low profile placeholder
+                colorway: "Off White / Black",
+                staffNote: "Low profile trend. Key alternative to Samba. Great for customers looking for something 'cleaner'.",
+                techFeature: "Soft Premium Leather"
+            },
+            {
+                id: 6,
+                sku: "IF1234",
+                name: "AE 1",
+                category: "BASKETBALL",
+                price: "$120",
+                date: "MAR 05",
+                tier: "PERFORMANCE",
+                image: "https://thekickzstand.com.au/wordpress/wp-content/uploads/2024/09/Screen-Shot-2024-09-15-at-7.09.53-pm.png", // Basketball placeholder
+                colorway: "With Love",
+                staffNote: "Anthony Edwards signature. Push court performance. Highlight the ventilation and stability.",
+                techFeature: "JET BOOST + Honeycomb Cage"
+            }
+        ];
+
+        const gridContainer = document.getElementById('calendar-grid');
+        const flyout = document.getElementById('product-flyout');
+        const overlay = document.getElementById('flyout-overlay');
+
+        // Function to generate HTML for each card
+        function renderCards() {
+            gridContainer.innerHTML = releases.map(item => {
+                // Determine badge style based on Launch Tier (Internal priority)
+                let badgeClass = "bg-gray-200 text-gray-600 border-gray-300";
+                let badgeText = item.tier;
+                
+                if (item.tier === "HYPE" || item.tier === "HIGH HEAT") {
+                    badgeClass = "bg-red-100 text-red-700 border-red-200 animate-pulse";
+                } else if (item.tier === "PERFORMANCE") {
+                    badgeClass = "bg-blue-50 text-blue-700 border-blue-200";
+                }
+
+                return `
+                <div onclick="openFlyout(${item.id})" class="cursor-pointer bg-white border-b border-gray-100 md:border md:rounded-lg md:shadow-sm p-3 md:p-4 flex flex-row gap-3 md:gap-4 md:flex-col group transition-all hover:bg-gray-50 active:bg-gray-100 select-none">
+                    
+                    <!-- Left: Image & Quick Status -->
+                    <div class="relative w-24 h-24 md:w-full md:h-48 shrink-0 bg-gray-100 rounded overflow-hidden card-image-container pointer-events-none">
+                        <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover mix-blend-multiply opacity-95 group-hover:opacity-100">
+                        <!-- Date Overlay -->
+                        <div class="absolute top-0 left-0 bg-black text-white text-[10px] md:text-xs font-bold px-2 py-1 m-1 rounded-sm brand-font">
+                            ${item.date}
+                        </div>
+                    </div>
+
+                    <!-- Right: Internal Details -->
+                    <div class="flex flex-col flex-grow justify-between md:h-full pointer-events-none">
+                        
+                        <!-- Header Data -->
+                        <div>
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-[10px] font-bold text-gray-400 tracking-wider">${item.category}</span>
+                                <span class="text-[10px] font-bold border px-1.5 rounded ${badgeClass}">${badgeText}</span>
+                            </div>
+                            
+                            <h3 class="text-sm md:text-lg font-bold leading-tight uppercase mb-0.5 text-gray-900 group-hover:text-blue-700 transition-colors">
+                                ${item.name}
+                            </h3>
+                            
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="sku-font text-[10px] md:text-xs text-gray-500 bg-gray-100 px-1 rounded">SKU: ${item.sku}</span>
+                                <span class="text-[10px] md:text-xs font-semibold text-gray-900">${item.price}</span>
+                            </div>
+                            
+                            <!-- Internal Staff Note (Desktop/Tablet mostly, but visible on mobile for key info) -->
+                            <div class="text-[10px] md:text-xs text-gray-600 bg-yellow-50 border-l-2 border-yellow-400 p-1.5 mb-2 line-clamp-2">
+                                <i class="fa-solid fa-circle-info text-[8px] mr-1 text-yellow-600"></i>
+                                <span class="font-medium">Staff Note:</span> ${item.staffNote}
+                            </div>
+                        </div>
+
+                        <!-- Action Row -->
+                        <div class="flex justify-between items-center mt-1 pt-2 border-t border-gray-100">
+                            <span class="text-[10px] md:text-xs font-bold text-blue-600 flex items-center gap-1">
+                                <i class="fa-solid fa-file-lines"></i> VIEW BRIEF
+                            </span>
+                            
+                            <div class="flex gap-2 pointer-events-auto">
+                                <button onclick="event.stopPropagation(); toggleReminder(this)" class="bell-icon w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:border-black hover:text-black transition-colors" title="Set Reminder">
+                                    <i class="fa-regular fa-bell text-xs"></i>
+                                </button>
+                                <button onclick="event.stopPropagation();" class="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:border-black hover:text-black transition-colors" title="Check Stock">
+                                    <i class="fa-solid fa-box-open text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle Reminder Functionality
+        function toggleReminder(btn) {
+            const icon = btn.querySelector('i');
+            if (icon.classList.contains('fa-regular')) {
+                icon.classList.remove('fa-regular');
+                icon.classList.add('fa-solid', 'text-yellow-500');
+                btn.classList.add('border-yellow-500', 'bg-yellow-50');
+                btn.classList.remove('text-gray-400', 'border-gray-200');
+            } else {
+                icon.classList.remove('fa-solid', 'text-yellow-500');
+                icon.classList.add('fa-regular');
+                btn.classList.remove('border-yellow-500', 'bg-yellow-50');
+                btn.classList.add('text-gray-400', 'border-gray-200');
+            }
+        }
+
+        // Flyout Logic
+        function openFlyout(id) {
+            const item = releases.find(r => r.id === id);
+            if (!item) return;
+
+            // Populate Data
+            document.getElementById('flyout-category').textContent = item.category;
+            document.getElementById('flyout-title').textContent = item.name;
+            document.getElementById('flyout-price').textContent = item.price;
+            document.getElementById('flyout-sku').textContent = `SKU: ${item.sku}`;
+            document.getElementById('flyout-image').src = item.image;
+            document.getElementById('flyout-tier').textContent = item.tier;
+            document.getElementById('flyout-date').textContent = item.date;
+            document.getElementById('flyout-note').textContent = item.staffNote;
+            document.getElementById('flyout-tech').textContent = item.techFeature;
+
+            // Show Overlay
+            overlay.classList.remove('hidden');
+            // Small timeout to allow display:block to render before adding opacity for transition
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+            }, 10);
+
+            // Show Flyout (Remove the hidden class)
+            flyout.classList.remove('flyout-hidden');
+        }
+
+        function closeFlyout() {
+            // Hide Flyout (Add the hidden class)
+            flyout.classList.add('flyout-hidden');
+            
+            // Hide Overlay
+            overlay.classList.add('opacity-0');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300); // Wait for transition to finish
+        }
+
+        renderCards();
+
+    </script>
+</body>
+</html>
