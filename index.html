@@ -58,8 +58,9 @@
 
         /* RESPONSIVE FLYOUT ANIMATION */
         /* Default (Mobile): Hides by moving down (Translate Y) */
+        /* Added !important to prevent Tailwind transform utility from overriding this */
         .flyout-hidden {
-            transform: translateY(100%);
+            transform: translateY(100%) !important;
         }
 
         /* Desktop (md and up): Hides by moving right (Translate X) */
